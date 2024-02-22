@@ -21,8 +21,8 @@ library(dotenv)
 print("Loading internal data tables into pipeline.")
 
 # Loads in uW's Internal DB
-connObj <- dbConnect(MySQL(),	 user=Sys.getenv("USER"),	 password=Sys.getenv("PASSWORD"),	
-                     dbname=Sys.getenv("DBNAME1"), host=Sys.getenv("HOST"), default.file="/app/my.cnf", groups="security")
+connObj <- dbConnect(MySQL(),	 user=Sys.getenv("TDB_USER"),	 password=Sys.getenv("TDB_PASSWORD"),	
+                     dbname=Sys.getenv("TDB_DB"), host=Sys.getenv("TDB_HOST"), default.file="/app/my.cnf", groups="security")
 
 # Check security of connection
 #rs_secure = dbGetQuery(connObj, "SHOW STATUS LIKE 'Ssl_cipher';")
@@ -192,8 +192,8 @@ lang_ietf_pb <- lang_ietf_pb %>%
 print("Preparing to load analysis tables into the internal DB")
 
 # Importing Analysis tables into internal uW DB
-connObj <- dbConnect(MySQL(),	 user=Sys.getenv("USER"),	 password=Sys.getenv("PASSWORD"),	
-                     dbname=Sys.getenv("DBNAME1"), host=Sys.getenv("HOST"), default.file="/app/my.cnf", groups="security")
+connObj <- dbConnect(MySQL(),	 user=Sys.getenv("TDB_USER"),	 password=Sys.getenv("TDB_PASSWORD"),	
+                     dbname=Sys.getenv("TDB_DB"), host=Sys.getenv("TDB_HOST"), default.file="/app/my.cnf", groups="security")
 
 rs <- dbSendQuery(connObj, 'set character set "utf8"')
 
