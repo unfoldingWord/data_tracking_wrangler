@@ -27,7 +27,9 @@ RUN addgroup --system app && adduser --system --ingroup app app
 
 WORKDIR /app
 
-COPY etl_data_pipeline.R /app/
+COPY etl_data_pipeline.R .
+COPY my.cnf .
+COPY us-west-2-bundle.pem .
 
 RUN chown app:app -R /app
 

@@ -22,7 +22,11 @@ print("Loading internal data tables into pipeline.")
 
 # Loads in uW's Internal DB
 connObj <- dbConnect(MySQL(),	 user=Sys.getenv("USER"),	 password=Sys.getenv("PASSWORD"),	
-                     dbname=Sys.getenv("DBNAME1"), host=Sys.getenv("HOST"))
+                     dbname=Sys.getenv("DBNAME1"), host=Sys.getenv("HOST"), default.file="/app/my.cnf", groups="security")
+
+# Check security of connection
+#rs_secure = dbGetQuery(connObj, "SHOW STATUS LIKE 'Ssl_cipher';")
+#print(as.character(rs_secure[1,2]))
 
 # Sets the characters to utf8 format so that special characters do not break the data
 rs <- dbSendQuery(connObj, 'set character set "utf8"')
@@ -189,9 +193,13 @@ print("Preparing to load analysis tables into the internal DB")
 
 # Importing Analysis tables into internal uW DB
 connObj <- dbConnect(MySQL(),	 user=Sys.getenv("USER"),	 password=Sys.getenv("PASSWORD"),	
-                     dbname=Sys.getenv("DBNAME1"), host=Sys.getenv("HOST"))
+                     dbname=Sys.getenv("DBNAME1"), host=Sys.getenv("HOST"), default.file="/app/my.cnf", groups="security")
 
 rs <- dbSendQuery(connObj, 'set character set "utf8"')
+
+# Check security of connection
+#rs_secure = dbGetQuery(connObj, "SHOW STATUS LIKE 'Ssl_cipher';")
+#print(as.character(rs_secure[1,2]))
 
 RMySQL::dbWriteTable(connObj,"analysis_full_lang_progress_bible", lang_ietf_pb, overwrite=T, row.names = FALSE)
 RMySQL::dbWriteTable(connObj,"analysis_granular_bt_project", Bible_sets, overwrite=T, row.names = FALSE)
