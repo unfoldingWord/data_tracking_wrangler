@@ -1,4 +1,4 @@
-FROM rhub/r-minimal:4.0.5
+FROM rhub/r-minimal:4.5.0
 
 # Prep the image
 RUN apk update
@@ -27,9 +27,9 @@ RUN addgroup --system app && adduser --system --ingroup app app
 
 WORKDIR /app
 
-COPY etl_data_pipeline.R .
 COPY my.cnf .
 COPY us-west-2-bundle.pem .
+COPY etl_data_pipeline.R .
 
 RUN chown app:app -R /app
 
