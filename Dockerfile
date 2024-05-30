@@ -28,7 +28,7 @@ RUN addgroup --system app && adduser --system --ingroup app app
 WORKDIR /app
 
 COPY my.cnf .
-COPY us-west-2-bundle.pem .
+ADD https://truststore.pki.rds.amazonaws.com/us-west-2/us-west-2-bundle.pem .
 COPY etl_data_pipeline.R .
 
 RUN chown app:app -R /app
