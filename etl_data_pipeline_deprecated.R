@@ -11,18 +11,22 @@ library(lubridate)
 library(tidyr)
 library(DBI)
 library(RMySQL)
-library(janitor)
-library(jsonlite)
+library(janitor, warn.conflicts = FALSE)
+library(jsonlite, warn.conflicts = FALSE)
 library(dotenv)
 
 #### This chunk pulls in all of the data from the various data sources. Data cleaning and joining is done to result in a final granular datatable that can be used for analysis 
-load_dot_env(file = '.env')
+#load_dot_env(file = '.env')
 
 print("Loading internal data tables into pipeline.")
 
 # Loads in uW's Internal DB
-connObj <- dbConnect(MySQL(),	 user=Sys.getenv("USER"),	 password=Sys.getenv("PASSWORD"),	
-                     dbname=Sys.getenv("DBNAME1"), host=Sys.getenv("HOST"))
+connObj <- dbConnect(MySQL(),	 user=Sys.getenv("TDB_USER"),	 password=Sys.getenv("TDB_PASSWORD"),	
+                     dbname=Sys.getenv("TDB_DB"), host=Sys.getenv("TDB_HOST"), default.file="/app/my.cnf", groups="security")
+
+# Check security of connection
+#rs_secure = dbGetQuery(connObj, "SHOW STATUS LIKE 'Ssl_cipher';")
+#print(as.character(rs_secure[1,2]))
 
 # Sets the characters to utf8 format so that special characters do not break the data
 rs <- dbSendQuery(connObj, 'set character set "utf8"')
@@ -151,6 +155,17 @@ language_engage_ietf_orgs_reps_to_pb <- lang_engage_ietf_to_network %>%
          activetranslation, allaccessstatus,allaccessgoal,aag_elligible,combined_anglicized_name,completed_scripture)
 
 
+# This table flips the join and looks at progress bible specific records and adds on uW engagement records to see the full list of AAG languages and where there is potential opportunity for uW to add language projects
+pb_language_engagements <- lang_engage_ietf_to_network %>%
+  right_join(pb_language_data, by = c("iso_639_2" = "languagecode")) %>%
+  mutate(aag_elligible = case_when(allaccessstatus %in% c("Translation in Progress","Translation Not Started","Not Shown") ~ "Yes",
+                                   is.na(allaccessstatus) ~ "Unknown" ,
+                                   T ~ "No"),
+         has_uw_engagement = case_when(!is.na(language_engagement_id) ~ "Yes",
+                                       T ~ "No")
+  ) %>%
+  select(languagename,iso_639_2, country, allaccessstatus,allaccessgoal,aag_elligible,has_uw_engagement)
+
 # Two lists are created to show what is OT or NT for connections of the Bible books
 ot_list <- bible_info %>% filter(bible_section == "OT") %>% select(scriptural_association) %>% unlist(use.names = F)
 nt_list <- bible_info %>% filter(bible_section == "NT") %>% select(scriptural_association) %>% unlist(use.names = F)
@@ -173,22 +188,21 @@ analysis_prep_dt <- inner_join(uw_translation_products, language_engage_ietf_org
 # This creates the master data table which brings all of the data together on the most granular level. The networks, language engagement, and progress bible data all gets attributed to each record that has detailed variables of progress in bible translation projects. This will be the table moving forward that is used for analysis
 master_uw_translation_projects <- analysis_prep_dt %>%
   group_by(english_short_name,combined_anglicized_name,resource_package,resource_format,bible_book_ref,scripture_text_name) %>%
-  # group_by(english_short_name,combined_anglicized_name,resource_format,scripture_text_name) %>%
   mutate(BP_num = n(),
-         project_status = case_when(
-           any(product_status == "Inactive") ~"Inactive",
-#           all(product_status == "Not Scheduled") ~ "Intent",
-           scriptural_association %in% c("Bible","NT","OT") & product_status == "Completed" ~ "Completed",
-           all(product_status == "Planned") ~ "Future",
-           any(product_status == "In Progress") ~ "Active",
-           resource_package == "OBS" & product_status == "Completed" ~ "Completed",
-           all(product_status == "Paused") | (any(product_status == "Paused") & any(product_status == "Completed")) ~ "Paused",
-           resource_package %in% c("BP","Scripture Text") & all(product_status == "Completed") & bible_book_ref == "NT" & BP_num < 27 ~ "Active",
-           resource_package %in% c("BP","Scripture Text") & all(product_status == "Completed") & bible_book_ref == "OT" & BP_num < 39 ~ "Active",
-           any(product_status == "Completed") & any(product_status == "Planned") ~ "Active",
-           all(product_status == "Completed") ~ "Completed"
-         )
-  ) %>% 
+         # Reconfiguring the status so that it is aggregated to the Bible, OT, NT level even if it involved Book packages as parts.
+         project_status = case_when(resource_package == "BP" & (bible_book_ref == "NT" | bible_book_ref == "OT")  & any(product_status == "In Progress") ~ "Active",
+                            # If Book Packages are completed but the full set of completed BPs is not 27 or 39 then it is listed as active/in progress
+                            resource_package == "BP" & bible_book_ref == "NT" & all(product_status == "Completed") & BP_num < 27 ~ "Active",
+                            resource_package == "BP" & bible_book_ref == "OT" & all(product_status == "Completed") & BP_num < 39 ~ "Active",
+                            resource_package == "Scripture Text" & bible_book_ref == "NT" & scriptural_association == "NT" & all(product_status == "Completed") ~ "Completed",
+                            resource_package == "Scripture Text" & bible_book_ref == "OT" & scriptural_association == "OT" & all(product_status == "Completed")  ~ "Completed",
+                            resource_package == "Scripture Text" & bible_book_ref == "NT" & scriptural_association %in% nt_list & all(product_status == "Completed") & BP_num < 27 ~ "Active",
+                            resource_package == "Scripture Text" & bible_book_ref == "OT" & scriptural_association %in% ot_list & all(product_status == "Completed") & BP_num < 39 ~ "Active",
+                            product_status == "Planned" | product_status == "Not Scheduled" ~"Future",
+                            any(product_status == "In Progress") ~"Active",
+                            product_status %in% c("Paused") ~"Paused",
+                            product_status %in% c("Inactive") ~"Inactive",
+                            all(product_status == "Completed") ~"Completed")) %>%
   ungroup()
 
 
@@ -198,11 +212,11 @@ concatenated_status <- master_uw_translation_projects %>% select(subtag_new,proj
   mutate(logic_status = case_when(Active == "Active" ~ "Active",
                                   Future == "Future" ~ "Future",
                                   Paused == "Paused" ~ "Paused",
-                                  Inactive == "Inactive" ~ "Inactive",
-#                                  Intent == "Intent" ~ "Intent",
                                   Completed == "Completed" ~ "Completed",
+                                  Inactive == "Inactive" ~ "Inactive",
                                   T ~ NA
-  )) %>% 
+
+  )) %>%
   select(subtag_new, "project_status" = logic_status) %>% unique()
 
 master_uw_language_engagements <- language_engage_ietf_orgs_reps_to_pb %>%
@@ -210,27 +224,18 @@ master_uw_language_engagements <- language_engage_ietf_orgs_reps_to_pb %>%
   mutate(project_status = case_when(is.na(project_status) ~ "No Status Listed",
                                     T ~ project_status))
 
-# This table flips the join and looks at progress bible specific records and adds on uW engagement records to see the full list of AAG languages and where there is potential opportunity for uW to add language projects as well as the uW project status
-pb_language_engagements <- master_uw_language_engagements %>%
-  select(iso_639_2, project_status, language_engagement_id) %>%
-  right_join(pb_language_data, by = c("iso_639_2" = "languagecode")) %>%
-  mutate(aag_elligible = case_when(allaccessstatus %in% c("Translation in Progress","Translation Not Started","Not Shown") ~ "Yes",
-                                   is.na(allaccessstatus) ~ "Unknown" ,
-                                   T ~ "No"),
-         has_uw_engagement = case_when(!is.na(language_engagement_id) ~ "Yes",
-                                       T ~ "No")
-  ) %>%
-  select(languagename,iso_639_2, country, allaccessstatus,allaccessgoal,aag_elligible,has_uw_engagement,"uw_project_status" = project_status)
-
 
 print("Preparing to load analysis tables into the internal DB")
 
 # Importing Analysis tables into internal uW DB
-connObj <- dbConnect(MySQL(),	 user=Sys.getenv("USER"),	 password=Sys.getenv("PASSWORD"),	
-                     dbname=Sys.getenv("DBNAME1"),
-                     host=Sys.getenv("HOST"))
+connObj <- dbConnect(MySQL(),	 user=Sys.getenv("TDB_USER"),	 password=Sys.getenv("TDB_PASSWORD"),	
+                     dbname=Sys.getenv("TDB_DB"), host=Sys.getenv("TDB_HOST"), default.file="/app/my.cnf", groups="security")
 
 rs <- dbSendQuery(connObj, 'set character set "utf8"')
+
+# Check security of connection
+#rs_secure = dbGetQuery(connObj, "SHOW STATUS LIKE 'Ssl_cipher';")
+#print(as.character(rs_secure[1,2]))
 
 RMySQL::dbWriteTable(connObj,"master_uw_language_engagements", master_uw_language_engagements, overwrite=T, row.names = FALSE)
 RMySQL::dbWriteTable(connObj,"master_uw_translation_projects", master_uw_translation_projects, overwrite=T, row.names = FALSE)
