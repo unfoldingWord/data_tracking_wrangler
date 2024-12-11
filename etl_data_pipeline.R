@@ -16,7 +16,9 @@ library(jsonlite)
 library(dotenv)
 
 #### This chunk pulls in all of the data from the various data sources. Data cleaning and joining is done to result in a final granular datatable that can be used for analysis 
-load_dot_env(file = '.env')
+if(file.exists('.env')){
+  load_dot_env(file = '.env')
+}
 
 print("Loading internal data tables into pipeline.")
 
