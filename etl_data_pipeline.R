@@ -37,8 +37,7 @@ language_engagements_organizations <- DBI::dbGetQuery(connObj, "select * from la
 organizations <- DBI::dbGetQuery(connObj, "select * from organizations;") # A list of networks uW is connected with
 pb_language_data <- DBI::dbGetQuery(connObj, "select * from pb_language_data;") # Progress Bible All Access Goal List
 sli_language_data <- DBI::dbGetQuery(connObj, "select * from sli_language_data;")  # Version 10 of the Strategic Language Initiative. Lists the latest Resource Levels per SL
-training_events <- DBI::dbGetQuery(connObj, "select * from training_events;") %>% # Load in Rough draft training data
-  filter(`Category of Training` != "Networks PR")
+training_events <- DBI::dbGetQuery(connObj, "select * from training_events;")  # Load in Rough draft training data
 uw_reps <- DBI::dbGetQuery(connObj, "select * from uw_reps;")  # A table representing all unfoldingWord network reps
 uw_translation_products <- DBI::dbGetQuery(connObj, "select * from uw_translation_products;") # The granular data of BT tracking and progress across each network and language. Most granular level of our data, which goes to unique resources and formats
 
@@ -169,6 +168,7 @@ analysis_prep_dt <- inner_join(uw_translation_products, language_engage_ietf_org
          ,
          scripture_text_name = case_when(scripture_text_name == "" ~ NA_character_,
                                          T ~ scripture_text_name))
+
 # This groups the data by specific strata in order to calculate a Status of the scripture as a whole project. This dataset will be used for the Funding Team report because it looks at the BT projects as a whole set when viewing the status of the project.
 # This creates the master data table which brings all of the data together on the most granular level. The networks, language engagement, and progress bible data all gets attributed to each record that has detailed variables of progress in bible translation projects. This will be the table moving forward that is used for analysis
 master_uw_translation_projects <- analysis_prep_dt %>%
