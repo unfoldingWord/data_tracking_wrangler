@@ -2,3 +2,4 @@ pipeline.env
 .env
 data_processing.env
 .Rhistory
+us-west-2-bundle.pem

@@ -24,7 +24,7 @@ print("Loading internal data tables into pipeline.")
 
 # Loads in uW's Internal DB
 connObj <- dbConnect(MySQL(),	 user=Sys.getenv("TDB_USER"),	 password=Sys.getenv("TDB_PASSWORD"),	
-                     dbname=Sys.getenv("TDB_DB"), host=Sys.getenv("TDB_HOST"), default.file="/app/my.cnf", groups="security")
+                     dbname=Sys.getenv("TDB_DB"), host=Sys.getenv("TDB_HOST"), default.file="./my.cnf", groups="security")
 
 # Sets the characters to utf8 format so that special characters do not break the data
 rs <- dbSendQuery(connObj, 'set character set "utf8"')
@@ -229,7 +229,7 @@ print("Preparing to load analysis tables into the internal DB")
 
 # Importing Analysis tables into internal uW DB
 connObj <- dbConnect(MySQL(),	 user=Sys.getenv("TDB_USER"),	 password=Sys.getenv("TDB_PASSWORD"),	
-                     dbname=Sys.getenv("TDB_DB"), host=Sys.getenv("TDB_HOST"), default.file="/app/my.cnf", groups="security")
+                     dbname=Sys.getenv("TDB_DB"), host=Sys.getenv("TDB_HOST"), default.file="./my.cnf", groups="security")
 
 rs <- dbSendQuery(connObj, 'set character set "utf8"')
 
