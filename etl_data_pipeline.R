@@ -24,7 +24,7 @@ print("Loading internal data tables into pipeline.")
 
 # Loads in uW's Internal DB
 connObj <- dbConnect(MySQL(),	 user=Sys.getenv("TDB_USER"),	 password=Sys.getenv("TDB_PASSWORD"),	
-                     dbname=Sys.getenv("TDB_DB"), host=Sys.getenv("TDB_HOST"), default.file="/app/my.cnf", groups="security")
+                     dbname=Sys.getenv("TDB_DB"), host=Sys.getenv("TDB_HOST"), default.file="./my.cnf", groups="security")
 
 # Sets the characters to utf8 format so that special characters do not break the data
 rs <- dbSendQuery(connObj, 'set character set "utf8"')
@@ -39,8 +39,7 @@ language_engagements_organizations <- DBI::dbGetQuery(connObj, "select * from la
 organizations <- DBI::dbGetQuery(connObj, "select * from organizations;") # A list of networks uW is connected with
 pb_language_data <- DBI::dbGetQuery(connObj, "select * from pb_language_data;") # Progress Bible All Access Goal List
 sli_language_data <- DBI::dbGetQuery(connObj, "select * from sli_language_data;")  # Version 10 of the Strategic Language Initiative. Lists the latest Resource Levels per SL
-training_events <- DBI::dbGetQuery(connObj, "select * from training_events;") %>% # Load in Rough draft training data
-  filter(`Category of Training` != "Networks PR")
+training_events <- DBI::dbGetQuery(connObj, "select * from training_events;")  # Load in Rough draft training data
 uw_reps <- DBI::dbGetQuery(connObj, "select * from uw_reps;")  # A table representing all unfoldingWord network reps
 uw_translation_products <- DBI::dbGetQuery(connObj, "select * from uw_translation_products;") # The granular data of BT tracking and progress across each network and language. Most granular level of our data, which goes to unique resources and formats
 
@@ -229,7 +228,7 @@ print("Preparing to load analysis tables into the internal DB")
 
 # Importing Analysis tables into internal uW DB
 connObj <- dbConnect(MySQL(),	 user=Sys.getenv("TDB_USER"),	 password=Sys.getenv("TDB_PASSWORD"),	
-                     dbname=Sys.getenv("TDB_DB"), host=Sys.getenv("TDB_HOST"), default.file="/app/my.cnf", groups="security")
+                     dbname=Sys.getenv("TDB_DB"), host=Sys.getenv("TDB_HOST"), default.file="./my.cnf", groups="security")
 
 rs <- dbSendQuery(connObj, 'set character set "utf8"')
 
