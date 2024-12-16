@@ -1,3 +1,4 @@
 pipeline.env
 .env
 data_processing.env
+.Rhistory

@@ -16,13 +16,15 @@ library(jsonlite)
 library(dotenv)
 
 #### This chunk pulls in all of the data from the various data sources. Data cleaning and joining is done to result in a final granular datatable that can be used for analysis 
-load_dot_env(file = '.env')
+if(file.exists('.env')){
+  load_dot_env(file = '.env')
+}
 
 print("Loading internal data tables into pipeline.")
 
 # Loads in uW's Internal DB
-connObj <- dbConnect(MySQL(),	 user=Sys.getenv("USER"),	 password=Sys.getenv("PASSWORD"),	
-                     dbname=Sys.getenv("DBNAME1"), host=Sys.getenv("HOST"))
+connObj <- dbConnect(MySQL(),	 user=Sys.getenv("TDB_USER"),	 password=Sys.getenv("TDB_PASSWORD"),	
+                     dbname=Sys.getenv("TDB_DB"), host=Sys.getenv("TDB_HOST"), default.file="/app/my.cnf", groups="security")
 
 # Sets the characters to utf8 format so that special characters do not break the data
 rs <- dbSendQuery(connObj, 'set character set "utf8"')
@@ -226,9 +228,8 @@ pb_language_engagements <- master_uw_language_engagements %>%
 print("Preparing to load analysis tables into the internal DB")
 
 # Importing Analysis tables into internal uW DB
-connObj <- dbConnect(MySQL(),	 user=Sys.getenv("USER"),	 password=Sys.getenv("PASSWORD"),	
-                     dbname=Sys.getenv("DBNAME1"),
-                     host=Sys.getenv("HOST"))
+connObj <- dbConnect(MySQL(),	 user=Sys.getenv("TDB_USER"),	 password=Sys.getenv("TDB_PASSWORD"),	
+                     dbname=Sys.getenv("TDB_DB"), host=Sys.getenv("TDB_HOST"), default.file="/app/my.cnf", groups="security")
 
 rs <- dbSendQuery(connObj, 'set character set "utf8"')
 
