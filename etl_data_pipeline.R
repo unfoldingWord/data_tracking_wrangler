@@ -209,7 +209,7 @@ concatenated_status <- master_uw_translation_projects %>% select(subtag_new,proj
 
 master_uw_language_engagements <- language_engage_ietf_orgs_reps_to_pb %>%
   left_join(concatenated_status) %>% 
-  mutate(project_status = case_when(is.na(project_status) ~ "No Status Listed",
+  mutate(project_status = case_when(is.na(project_status) ~ "Prospective",
                                     T ~ project_status))
 
 # This table flips the join and looks at progress bible specific records and adds on uW engagement records to see the full list of AAG languages and where there is potential opportunity for uW to add language projects as well as the uW project status
