@@ -2,6 +2,6 @@ pipeline.env
 .env
 data_processing.env
 .Rhistory
-us-west-2-bundle.pem
 .Rproj.user
 data_tracking_wrangler.Rproj
+us-west-2-bundle.pem
