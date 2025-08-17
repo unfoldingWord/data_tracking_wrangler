@@ -174,42 +174,43 @@ analysis_prep_dt <- inner_join(uw_translation_products, language_engage_ietf_org
 # This groups the data by specific strata in order to calculate a Status of the scripture as a whole project. This dataset will be used for the Funding Team report because it looks at the BT projects as a whole set when viewing the status of the project.
 # This creates the master data table which brings all of the data together on the most granular level. The networks, language engagement, and progress bible data all gets attributed to each record that has detailed variables of progress in bible translation projects. This will be the table moving forward that is used for analysis
 master_uw_translation_projects <- analysis_prep_dt %>%
-  group_by(english_short_name,combined_anglicized_name,resource_package,resource_format,bible_book_ref,scripture_text_name) %>%
+  group_by(language_engagement_id,resource_package,resource_format,bible_book_ref,scripture_text_name) %>%
   # group_by(english_short_name,combined_anglicized_name,resource_format,scripture_text_name) %>%
   mutate(BP_num = n(),
          project_status = case_when(
            any(product_status == "Inactive") ~"Inactive",
-#           all(product_status == "Not Scheduled") ~ "Intent",
            scriptural_association %in% c("Bible","NT","OT") & product_status == "Completed" ~ "Completed",
            all(product_status == "Planned") ~ "Future",
            any(product_status == "In Progress") ~ "Active",
            resource_package == "OBS" & product_status == "Completed" ~ "Completed",
-           all(product_status == "Paused") | (any(product_status == "Paused") & any(product_status == "Completed")) ~ "Paused",
+           all(product_status == "Paused") | (any(product_status == "Paused") & (any(product_status == "Completed")) | any(product_status == "Planned")) ~ "Paused",
            resource_package %in% c("BP","Scripture Text") & all(product_status == "Completed") & bible_book_ref == "NT" & BP_num < 27 ~ "Active",
            resource_package %in% c("BP","Scripture Text") & all(product_status == "Completed") & bible_book_ref == "OT" & BP_num < 39 ~ "Active",
-           any(product_status == "Completed") & any(product_status == "Planned") ~ "Active",
-           all(product_status == "Completed") ~ "Completed"
+           any(product_status == "Completed") & (any(product_status == "Planned") | any(product_status == "Not Scheduled")) ~ "Active",
+           all(product_status == "Completed") ~ "Completed",
+           any(product_status == "Not Scheduled") ~ "Intent"
          )
   ) %>% 
   ungroup()
 
 
 # Parses out the unique project status for each language and condenses them into a single concatenated field of statuses per single language. This will be used to bring in engagement status into the lang_ietf_pb table. The goal is so that we would know language engagements that are currently in an active status.
-concatenated_status <- master_uw_translation_projects %>% select(subtag_new,project_status) %>% unique() %>% group_by(subtag_new) %>% arrange(project_status) %>%
+concatenated_status <- master_uw_translation_projects %>% select(language_engagement_id,project_status) %>% unique() %>% group_by(language_engagement_id) %>% arrange(project_status) %>%
   pivot_wider(names_from = project_status, values_from = project_status) %>%
   mutate(logic_status = case_when(Active == "Active" ~ "Active",
                                   Future == "Future" ~ "Future",
                                   Paused == "Paused" ~ "Paused",
                                   Inactive == "Inactive" ~ "Inactive",
-#                                  Intent == "Intent" ~ "Intent",
+                                  Intent == "Intent" ~ "Intent",
                                   Completed == "Completed" ~ "Completed",
                                   T ~ NA
   )) %>% 
-  select(subtag_new, "project_status" = logic_status) %>% unique()
+  select(language_engagement_id, "project_status" = logic_status) %>% unique()
 
 master_uw_language_engagements <- language_engage_ietf_orgs_reps_to_pb %>%
   left_join(concatenated_status) %>% 
   mutate(project_status = case_when(is.na(project_status) ~ "Prospective",
+                                    project_status == "Intent" ~ "Prospective",
                                     T ~ project_status))
 
 # This table flips the join and looks at progress bible specific records and adds on uW engagement records to see the full list of AAG languages and where there is potential opportunity for uW to add language projects as well as the uW project status
@@ -222,7 +223,7 @@ pb_language_engagements <- master_uw_language_engagements %>%
          has_uw_engagement = case_when(!is.na(language_engagement_id) ~ "Yes",
                                        T ~ "No")
   ) %>%
-  select(languagename,iso_639_2, country, allaccessstatus,allaccessgoal,aag_elligible,has_uw_engagement,"uw_project_status" = project_status)
+  select(languagename,iso_639_2, country, countrycode, allaccessstatus,allaccessgoal,aag_elligible,has_uw_engagement,"uw_project_status" = project_status)
 
 
 print("Preparing to load analysis tables into the internal DB")
